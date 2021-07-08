@@ -2,6 +2,7 @@ import tensorflow.compat.v1 as tf
 import numpy as np
 from scipy.stats import truncnorm
 import tensorflow_hub as hub
+from ...utils import one_hot_if_needed
 
 class BigGAN():
 
@@ -70,7 +71,7 @@ class BigGAN():
         if label.shape[0] != num:
             raise ValueError('Got # noise samples ({}) != # label samples ({})'.format(noise.shape[0], label.shape[0]))
         
-        label = self.one_hot_if_needed(label)
+        label = one_hot_if_needed(label)
         images = []
 
         with tf.Session() as sess:
