@@ -55,46 +55,6 @@ class BigGAN():
         values = truncnorm.rvs(-2, 2, size=(batch_size, self.dim_z), random_state=state)
         return truncation * values
 
-    def one_hot(self, index):
-
-        '''
-            Performs one hot enoding on the index.
-            
-            Params:
-                index: index of the object to be generated.
-
-            Returns: 
-                output: 2D aray of one hot encoded indices.
-        '''
-        
-        index = np.asarray(index)
-        
-        if len(index.shape) == 0:
-            index = np.asarray([index])
-        
-        assert len(index.shape) == 1
-        
-        num = index.shape[0]
-        output = np.zeros((num, self.vocab_size), dtype=np.float32)
-        output[np.arange(num), index] = 1
-        
-        return output
-
-    def one_hot_if_needed(self, label):
-
-        '''
-            Checks if the labels are already one hot encoded.
-            Performs One hot encoding only if the labels are not already onehot encoded.
-        '''
-
-        label = np.asarray(label)
-        
-        if len(label.shape) <= 1:
-            label = self.one_hot(label)
-        
-        assert len(label.shape) == 2
-        return label
-
     def sampler(self, noise, label, truncation=1., batch_size=8):
         '''
         
