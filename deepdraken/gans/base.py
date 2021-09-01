@@ -12,7 +12,7 @@ from .models.scartch import get_generator_discriminator_pair
 class DCGAN():
 
     '''
-        Base class for DCGANs. This calss will be inherited by other classes.
+        Base class for DCGANs. This class will be inherited by other classes.
 
     '''
     
@@ -46,15 +46,15 @@ class DCGAN():
         '''
             Sets the loss function that will be used for calculated Generator and Discriminator Loss 
         '''
-        self.cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        self.loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
 
     def discriminator_loss(self, real_output, fake_output):
         '''
             Calculates Discriminator Loss.
         '''
 
-        real_loss = self.cross_entropy(tf.ones_like(real_output), real_output)
-        fake_loss = self.cross_entropy(tf.zeros_like(fake_output), fake_output)
+        real_loss = self.loss(tf.ones_like(real_output), real_output)
+        fake_loss = self.loss(tf.zeros_like(fake_output), fake_output)
         total_loss = real_loss + fake_loss
         return total_loss
 
@@ -62,7 +62,7 @@ class DCGAN():
         '''
             Calculates Generator Loss.
         '''
-        return self.cross_entropy(tf.ones_like(fake_output), fake_output)
+        return self.loss(tf.ones_like(fake_output), fake_output)
 
     def set_optimizer(self) -> None:
         self.generator_optimizer = tf.keras.optimizers.Adam(1e-4)
