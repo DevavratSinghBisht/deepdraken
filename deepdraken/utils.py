@@ -1,6 +1,6 @@
 import numpy as np
 
-def one_hot(self, class, total_classes):
+def one_hot(class, total_classes):
     '''
         Performs one hot enoding on the index.
         
@@ -23,7 +23,7 @@ def one_hot(self, class, total_classes):
     
     return output
 
-def one_hot_if_needed(self, class, total_classes):
+def one_hot_if_needed(class, total_classes):
     '''
         Checks if the labels are already one hot encoded.
         Performs One hot encoding only if the labels are not already onehot encoded.
@@ -31,7 +31,7 @@ def one_hot_if_needed(self, class, total_classes):
     label = np.asarray(class)
     
     if len(label.shape) <= 1:
-        label = self.one_hot(class, total_classes)
+        label = one_hot(class, total_classes)
     
     assert len(label.shape) == 2
     return label
