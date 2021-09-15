@@ -5,7 +5,7 @@ import cv2
 
 import os
 
-class DataGenerator(keras.utils.Sequence):
+class GANDataGenerator(keras.utils.Sequence):
     'Generates data for Keras'
     def __init__(self, dataset_path, batch_size=32, dim=(28,28,3), shuffle=True):
         'Initialization'

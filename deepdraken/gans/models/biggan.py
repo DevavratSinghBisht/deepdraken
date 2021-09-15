@@ -3,6 +3,7 @@ import numpy as np
 from scipy.stats import truncnorm
 import tensorflow_hub as hub
 from ...utils import one_hot_if_needed
+from utils import truncated_noise_sample
 
 class BigGAN():
 
@@ -38,28 +39,19 @@ class BigGAN():
 
         self.initializer = tf.global_variables_initializer()
 
-    def truncated_z_sample(self, batch_size, truncation=1., seed=None):
+    def generate_image(self, num_samples, label, truncation=1., batch_size=8, noise_seed=0):
         '''
-            Generates truncated noise samples.
+        Generates Images
 
-            Params:
-                batch_size:
-                truncation: the value at which truncation is to be performed.
-                seed: random seed, random value is selected if not provided.
-
-            Returns:
-                noise vectors
-            
+        :param num_samples: number of images to generate
+        :param label: class of the image to be generated
+        :truncation: # TODO fill here
+        :param batch_size: number of images to be generated in a single batch
+        :param noise seed: noise seed for generating the noise
+        :return: four dimensional array containing all the generated images
         '''
 
-        state = None if seed is None else np.random.RandomState(seed)
-        values = truncnorm.rvs(-2, 2, size=(batch_size, self.dim_z), random_state=state)
-        return truncation * values
-
-    def sampler(self, noise, label, truncation=1., batch_size=8):
-        '''
-        
-        '''
+        noise = truncated_noise_sample(num_samples, self.dim_z, truncation, noise_seed)
 
         noise = np.asarray(noise)
         label = np.asarray(label)
@@ -71,7 +63,7 @@ class BigGAN():
         if label.shape[0] != num:
             raise ValueError('Got # noise samples ({}) != # label samples ({})'.format(noise.shape[0], label.shape[0]))
         
-        label = one_hot_if_needed(label)
+        label = one_hot_if_needed(label, 1000)
         images = []
 
         with tf.Session() as sess:
@@ -87,11 +79,3 @@ class BigGAN():
         images = np.uint8(images)
         
         return images
-
-    def sample(self, class_label, num_samples, truncation=0.4, noise_seed=0):
-        '''
-            Runs the sampler function.
-        '''
-        z = self.truncated_z_sample(num_samples, truncation, noise_seed)
-        y = class_label
-        return self.sampler(z, y,truncation)
