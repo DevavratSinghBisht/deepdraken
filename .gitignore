@@ -2,6 +2,7 @@
 tutorials/
 test.py
 ideas.txt
+TODO.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -3,11 +3,9 @@
 '''
 from typing import Optional, Tuple, Union
 import tensorflow as tf
-
-from ..data_prep.data_gen import GANDataGenerator
-
-import tensorflow as tf
 from tensorflow.keras import layers
+from ..data_prep.data_gen import GANDataGenerator
+from tqdm import tqdm
 
 
 def get_generator_model(noise_dim, n_channels) -> tf.keras.Sequential:
@@ -62,14 +60,12 @@ class GAN():
     '''
     
     def __init__(self, 
-                 loss: Union[str, tf.keras.losses],
-                 optimizer : Union[str, tf.keras.optimizers],
+                 optimizer,
                  generator_path,
                  discriminator_path,
                  ) -> None:
 
         '''
-        :param loss: loss function or the name of loss function
         :param optimizer: optimizer or the name of the optimizer
         :param generator_path: path to the generator model
         :param discriminator_path: path to the discriminator model
@@ -81,12 +77,12 @@ class GAN():
         self.set_loss()
         self.set_optimizer()
 
-        self.generator
-        self.discriminator
-        self.generator_optimizer
-        self.discriminator_optimizer
-        self.image_dim
-        self.noise_dim
+        #self.generator
+        #self.discriminator
+        #self.generator_optimizer
+        #self.discriminator_optimizer
+        #self.image_dim
+        #self.noise_dim
 
     def load_model(self, generator_path: str, discriminator_path: str) -> None:
 
@@ -111,7 +107,7 @@ class GAN():
         self.image_dim = image_dim
 
         # TODO create a generator discriminator pair using the noise dim and image dim        
-        print("Creating scratch Generator and Discriminator parir.")
+        print("Creating scratch Generator and Discriminator pair.")
         self.generator, self.discriminator = get_generator_discriminator_pair(noise_dim, image_dim)
 
     def set_loss(self) -> None:
@@ -195,7 +191,7 @@ class GAN():
 
         datagen = GANDataGenerator(data_path, batch_size, dim, shuffle)
         
-        for epochs in range(epochs):
+        for epochs in tqdm(range(epochs)):
             for image_batch in datagen:
                 self.__train_step(image_batch, batch_size)
 
@@ -204,5 +200,6 @@ class GAN():
         '''
             Calls all other functions in order to train the models.
         '''
+        self.create_model(128, 3)
 
-        self.train(data_path, batch_size, self.dim, shuffle, epochs)
+        self.train(data_path, batch_size, (28, 28, 3), shuffle, epochs)

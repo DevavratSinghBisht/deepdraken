@@ -1,4 +1,4 @@
-import tensorflow.compat.v1 as tf
+#import tensorflow.compat.v1 as tf
 import numpy as np
 from scipy.stats import truncnorm
 import tensorflow_hub as hub
