@@ -30,12 +30,12 @@ def get_generator_model(noise_dim, n_channels) -> tf.keras.Sequential:
 
     return model
 
-def get_discriminator_model(n_channels) -> tf.keras.Sequential :
+def get_discriminator_model(input_shape) -> tf.keras.Sequential :
     '''
         Creates and returns a Generator Model.
     '''
     model = tf.keras.Sequential()
-    model.add(layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same', input_shape=[28, 28, n_channels]))
+    model.add(layers.Conv2D(64, (5, 5), strides=(2, 2), padding='same', input_shape=input_shape))
     model.add(layers.LeakyReLU())
     model.add(layers.Dropout(0.3))
     model.add(layers.Conv2D(128, (5, 5), strides=(2, 2), padding='same'))
@@ -49,7 +49,10 @@ def get_generator_discriminator_pair(noise_dim, n_channels) -> tuple:
     '''
         Creates a generator discriminator pair that are compatible with each other.
     '''
-    return get_generator_model(noise_dim, n_channels), get_discriminator_model(n_channels)
+    generator = get_generator_model(noise_dim, n_channels)
+    discriminator_input_dim = generator.output_shape[1:]
+    discriminator = get_discriminator_model(discriminator_input_dim)
+    return generator, discriminator
 
 
 class GAN():
@@ -60,62 +63,92 @@ class GAN():
     '''
     
     def __init__(self, 
-                 optimizer,
-                 generator_path,
-                 discriminator_path,
+                 generator = None,
+                 discriminator = None,
+                 optimizer = None,
+                 loss = 'binary crossentropy',
                  ) -> None:
 
         '''
+        :param generator: generator model or path to the generator model
+        :param discriminator: discriminator model path to the discriminator model
+        :param loss: loss function or the name of loss function
         :param optimizer: optimizer or the name of the optimizer
-        :param generator_path: path to the generator model
-        :param discriminator_path: path to the discriminator model
         
         :returns: None
         '''
 
-        # TODO if string inputs are given then get their respective objects
-        self.set_loss()
-        self.set_optimizer()
+        if type(loss) == str: 
+            self.loss = self.get_loss(loss)
+        else:
+            self.loss = loss
 
-        #self.generator
-        #self.discriminator
-        #self.generator_optimizer
-        #self.discriminator_optimizer
-        #self.image_dim
-        #self.noise_dim
+        if type(generator) == str and type(discriminator) == str:
+            self.generator, self.discriminator = self.load_model(generator, discriminator)
+        elif generator == None and discriminator == None:
+            self.image_dim = (28 ,28, 3)
+            self.noise_dim = 128
+            self.generator, self.discriminator = get_generator_discriminator_pair(self.noise_dim, self.image_dim[-1])
+        else:
+            self.assert_models(generator, discriminator)
 
-    def load_model(self, generator_path: str, discriminator_path: str) -> None:
+        self.generator_optimizer, self.discriminator_optimizer = self.get_optimizer(optimizer)
+
+    def load_model(self, generator_path: str, discriminator_path: str):
 
         '''
             Loads the generator and discriminator models.
 
             :param generator_path: path to the generator model
             :param discriminator_path: path to the discriminator model
+            
+            :return: None
+        '''
+        generator = tf.keras.models.load_model(generator_path)
+        discriminator = tf.keras.models.load_model(discriminator_path)
+
+        self.assert_models(generator, discriminator)
+
+        return generator, discriminator
+
+    def assert_models(self, generator, discriminator) -> None:
+
+        '''
+            Checks if the models are compatible.
+
+            :param generator: generator model
+            :param discriminator: discriminator model
 
             :return: None
         '''
-        
-        # TODO use the paths to load the model 
-        self.generator = generator_path
-        self.discriminator = discriminator_path
+        #TODO generalise the noise dimension
+        noise_dim = generator.input_shape
+        assert len(noise_dim) == 2, "Noise Vector should have a single dimension."
+        self.noise_dim = noise_dim[1]
 
-        # TODO use the model arcitecture to find the noise dim size and the image dim size
+        #TODO generalise the image dimension
+        generator_output_dim = generator.output_shape
+        assert len(generator_output_dim) == 4 , "Output Image is not 3 dimensional"
+        self.image_dim = generator_output_dim[1:]
 
-    def create_model(self, noise_dim: Tuple, image_dim: Tuple) -> None:
+        discriminator_input_dim = discriminator.input_shape
+        assert generator_output_dim == discriminator_input_dim, "Generator output doens't have the same shape as discriminator input."
 
-        self.noise_dim = noise_dim
-        self.image_dim = image_dim
-
-        # TODO create a generator discriminator pair using the noise dim and image dim        
-        print("Creating scratch Generator and Discriminator pair.")
-        self.generator, self.discriminator = get_generator_discriminator_pair(noise_dim, image_dim)
-
-    def set_loss(self) -> None:
+    def get_loss(self, loss: str):
         '''
             Sets the loss function that will be used for calculated Generator and Discriminator Loss 
         '''
-        # TODO set loss uing the the string provided in __init__
-        self.loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        if loss == 'binary crossentropy' or loss == 'bce':
+            return tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        elif loss == 'wasserstein':
+            # TODO return wasserstein loss
+            raise NotImplementedError(('wasserstein loss not implemented'))
+
+    def generator_loss(self, fake_output):
+        '''
+            Calculates Generator Loss.
+        '''
+        return self.loss(tf.ones_like(fake_output), fake_output)
 
     def discriminator_loss(self, real_output, fake_output):
         '''
@@ -127,20 +160,32 @@ class GAN():
         total_loss = real_loss + fake_loss
         return total_loss
 
-    def generator_loss(self, fake_output) -> None:
+    def get_optimizer(self, optimizer=None) -> tuple:
         '''
-            Calculates Generator Loss.
+            :param optimizer: name of optimzer or a an object from any of the classes in keras.optimizers or a list of these attributes
+            :return: tuple of generator optimizer and discriminator optimizer
         '''
-        return self.loss(tf.ones_like(fake_output), fake_output)
-
-    def set_optimizer(self) -> None:
-
-        # TODO set optimizer using the string provided in __init__
-        self.generator_optimizer = tf.keras.optimizers.Adam(1e-4)
-        self.discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
 
 
-    # `tf.function` causes the function to be "compiled".
+        def get_optim(optimizer, dtype_optim):
+            
+            if dtype_optim == str:
+                tf.keras.optimizers.get(optimizer)
+            else:
+                return optimizer
+            
+        if type(optimizer) == list:
+            # TODO better assert string
+            assert len(optimizer) == 2, 'The list must contain two elements, one for generator and one for discriminator'
+            return get_optim(optimizer[0]), get_optim(optimizer[1]) 
+
+        elif optimizer == None:
+            return tf.keras.optimizers.Adam(1e-4), tf.keras.optimizers.Adam(1e-4)
+        else:
+            optim = get_optim(optimizer)
+            return optim, optim
+
+    # `tf.function` causes the function to be compiled.
     @tf.function
     def __train_step(self, images, batch_size) -> None:
         '''
@@ -176,30 +221,28 @@ class GAN():
         self.generator_optimizer.apply_gradients(zip(gradients_of_generator, self.generator.trainable_variables))
         self.discriminator_optimizer.apply_gradients(zip (gradients_of_discriminator, self.discriminator.trainable_variables))
 
-    def train(self, data_path, batch_size, dim, shuffle, epochs) -> None:
+    def train(self, data_path, batch_size, epochs, shuffle = True) -> None:
         '''
             Trains the model.
 
             :param data_path: path to the dataset for training
             :param batch_size: batch size for training
-            :param dim: dimension of the image on which the GAN will be trained
-            :param shuffle: to shuffle the dataset or not while training
             :param epochs: number of epochs to train on
+            :param shuffle: to shuffle the dataset or not while training
 
             :return: None
         '''
 
-        datagen = GANDataGenerator(data_path, batch_size, dim, shuffle)
+        datagen = GANDataGenerator(data_path, batch_size, self.image_dim, shuffle)
         
         for epochs in tqdm(range(epochs)):
             for image_batch in datagen:
                 self.__train_step(image_batch, batch_size)
 
-    def run(self, epochs, data_path, batch_size, shuffle=True) -> None:
+    def run(self, data_path, epochs=2, batch_size=2, shuffle=True) -> None:
         
         '''
             Calls all other functions in order to train the models.
         '''
-        self.create_model(128, 3)
-
-        self.train(data_path, batch_size, (28, 28, 3), shuffle, epochs)
+    
+        self.train(data_path, batch_size, shuffle, epochs)
