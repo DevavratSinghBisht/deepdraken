@@ -2,6 +2,8 @@
     This file conatins a class and functions for GAN Training.
 '''
 from typing import Optional, Tuple, Union
+import os
+
 import tensorflow as tf
 from tensorflow.keras import layers
 from ..data_prep.data_gen import GANDataGenerator
@@ -84,7 +86,7 @@ class GAN():
             self.loss = loss
 
         if type(generator) == str and type(discriminator) == str:
-            self.generator, self.discriminator = self.load_model(generator, discriminator)
+            self.generator, self.discriminator = self.load_models(generator, discriminator)
         elif generator == None and discriminator == None:
             self.image_dim = (28 ,28, 3)
             self.noise_dim = 128
@@ -93,8 +95,9 @@ class GAN():
             self.assert_models(generator, discriminator)
 
         self.generator_optimizer, self.discriminator_optimizer = self.get_optimizer(optimizer)
+        
 
-    def load_model(self, generator_path: str, discriminator_path: str):
+    def load_models(self, generator_path: str, discriminator_path: str):
 
         '''
             Loads the generator and discriminator models.
@@ -175,8 +178,7 @@ class GAN():
                 return optimizer
             
         if type(optimizer) == list:
-            # TODO better assert string
-            assert len(optimizer) == 2, 'The list must contain two elements, one for generator and one for discriminator'
+            assert len(optimizer) == 2, 'Optimizer list must contain two elements, one for generator and one for discriminator'
             return get_optim(optimizer[0]), get_optim(optimizer[1]) 
 
         elif optimizer == None:
@@ -184,6 +186,15 @@ class GAN():
         else:
             optim = get_optim(optimizer)
             return optim, optim
+
+    def get_checkpoint(self, checkpoint_dir):
+        checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+        checkpoint = tf.train.Checkpoint(generator_optimizer=self.generator_optimizer,
+                                         discriminator_optimizer=self.discriminator_optimizer,
+                                         generator=self.generator,
+                                         discriminator=self.discriminator)
+
+        return checkpoint_prefix, checkpoint
 
     # `tf.function` causes the function to be compiled.
     @tf.function
@@ -221,7 +232,7 @@ class GAN():
         self.generator_optimizer.apply_gradients(zip(gradients_of_generator, self.generator.trainable_variables))
         self.discriminator_optimizer.apply_gradients(zip (gradients_of_discriminator, self.discriminator.trainable_variables))
 
-    def train(self, data_path, batch_size, epochs, shuffle = True) -> None:
+    def train(self, data_path, batch_size, epochs, shuffle = True, checkpoint_dir=None, checkpoint_method=0) -> None:
         '''
             Trains the model.
 
@@ -235,9 +246,26 @@ class GAN():
 
         datagen = GANDataGenerator(data_path, batch_size, self.image_dim, shuffle)
         
-        for epochs in tqdm(range(epochs)):
-            for image_batch in datagen:
-                self.__train_step(image_batch, batch_size)
+        if checkpoint_dir == None:
+            for epoch in tqdm(range(epochs)):
+                for image_batch in datagen:
+                    self.__train_step(image_batch, batch_size)
+        
+        if checkpoint_dir is not None:
+            checkpoint_prefix, checkpoint = self.get_checkpoint(checkpoint_dir)
+
+            for epoch in tqdm(range(epochs)):
+                for image_batch in datagen:
+                    self.__train_step(image_batch, batch_size)
+
+                if type(checkpoint_method) == int:
+                    if (epoch + 1) % checkpoint_method == 0:
+                        checkpoint.save(file_prefix = checkpoint_prefix)
+                elif checkpoint_method == 'best generator':
+                    # TODO check the lowest loss and save that generator
+                    raise NotImplementedError("Saving best generator checkpoint is not implemented.")
+
+
 
     def run(self, data_path, epochs=2, batch_size=2, shuffle=True) -> None:
         
