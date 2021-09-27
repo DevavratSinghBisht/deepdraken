@@ -3,6 +3,7 @@
 '''
 from typing import Optional, Tuple, Union
 import os
+import numpy as np
 
 import tensorflow as tf
 from tensorflow.keras import layers
@@ -95,6 +96,9 @@ class GAN():
             self.assert_models(generator, discriminator)
 
         self.generator_optimizer, self.discriminator_optimizer = self.get_optimizer(optimizer)
+
+        self.generator_loss_list = None
+        self.discriminator_loss_list = None
         
 
     def load_models(self, generator_path: str, discriminator_path: str):
@@ -198,7 +202,7 @@ class GAN():
 
     # `tf.function` causes the function to be compiled.
     @tf.function
-    def __train_step(self, images, batch_size) -> None:
+    def __train_step(self, images, batch_size):
         '''
             Performs training step for one batch.
 
@@ -232,7 +236,9 @@ class GAN():
         self.generator_optimizer.apply_gradients(zip(gradients_of_generator, self.generator.trainable_variables))
         self.discriminator_optimizer.apply_gradients(zip (gradients_of_discriminator, self.discriminator.trainable_variables))
 
-    def train(self, data_path, batch_size, epochs, shuffle = True, checkpoint_dir=None, checkpoint_method=0) -> None:
+        return gen_loss, disc_loss
+
+    def train(self, data_path, batch_size, epochs, shuffle = True, checkpoint_dir=None, checkpoint_strategy=0) -> None:
         '''
             Trains the model.
 
@@ -240,32 +246,75 @@ class GAN():
             :param batch_size: batch size for training
             :param epochs: number of epochs to train on
             :param shuffle: to shuffle the dataset or not while training
+            :param checkpoint_dir: path to the directory where the checkpoints are to be saved
+            :param checkpoint_mehtod: if integer is passed then checkpoints after those interval of epochs will be saved
+                                      if string is passed:
+                                          best generator: saves the latest best generator checkpoint 
+                                                          and corresponding discriminator checkpoing 
 
             :return: None
         '''
 
         datagen = GANDataGenerator(data_path, batch_size, self.image_dim, shuffle)
         
-        if checkpoint_dir == None:
-            for epoch in tqdm(range(epochs)):
-                for image_batch in datagen:
-                    self.__train_step(image_batch, batch_size)
+        # stores losses of all the epochs
+        gen_loss_list = []
+        disc_loss_list = []
         
-        if checkpoint_dir is not None:
+        # get checkpoints if checkpoint directory is provided
+        save_checkpoint = False
+        if checkpoint_dir != None:
             checkpoint_prefix, checkpoint = self.get_checkpoint(checkpoint_dir)
+            save_checkpoint = True
 
-            for epoch in tqdm(range(epochs)):
-                for image_batch in datagen:
-                    self.__train_step(image_batch, batch_size)
+        # training loop
+        for epoch in tqdm(range(epochs)):
+            
+            # stores losses of all the batches for each epoch
+            gen_loss = []
+            disc_loss = []
+            
+            # train on a single batch
+            for image_batch in datagen:
+                batch_gen_loss, batch_disc_loss = self.__train_step(image_batch, batch_size)
+                gen_loss.append(batch_gen_loss)
+                disc_loss.append(batch_disc_loss)
 
-                if type(checkpoint_method) == int:
-                    if (epoch + 1) % checkpoint_method == 0:
+            # calculate loss for the whole epoch and append it to respective list    
+            gen_loss_list.append(np.average(gen_loss))
+            disc_loss_list.append(np.average(disc_loss))
+                
+            # save the checkpoint if needed
+            if save_checkpoint:
+
+                # if interger is passed in the method
+                if type(checkpoint_strategy) == int:
+                    # if integer then safter after that much epochs
+                    assert checkpoint_strategy >= 0, "Number of epochs to skip for saving checkpoint should not be negative."
+                    if (epoch + 1) % (checkpoint_strategy + 1) == 0:
                         checkpoint.save(file_prefix = checkpoint_prefix)
-                elif checkpoint_method == 'best generator':
-                    # TODO check the lowest loss and save that generator
-                    raise NotImplementedError("Saving best generator checkpoint is not implemented.")
+                
+                # if string is passed in the method
+                elif checkpoint_strategy == 'best generator':
+                    # saving the checkpoint if the generator loss is mininmized
+                    if np.argmin(gen_loss_list) == len(gen_loss_list) - 1 :
+                        checkpoint.save(file_prefix = checkpoint_prefix)
+ 
+                else:
+                    print('Not able to find a suitable checkpoint strategy, checkpoints will not be saved.')
 
+        self.generator_loss_list = np.array(gen_loss_list)
+        self.discriminator_loss_list = np.array(disc_loss_list)
 
+    def plot(self, loss=True, accuracy=True):
+
+        if self.generator_loss_list == None and self.discriminator_loss_list == None :
+            raise Exception('Please train the modle first.')
+
+        # TODO plot the loss curve from the loss lists in the train function
+        # TODO crate metric for the discriminator
+        # TODO plot the accuracy
+        raise NotImplementedError('plotting function is not available')
 
     def run(self, data_path, epochs=2, batch_size=2, shuffle=True) -> None:
         
