@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow import keras
 import numpy as np
 import cv2
+import math
 
 import os
 
@@ -18,7 +19,7 @@ class GANDataGenerator(keras.utils.Sequence):
 
     def __len__(self):
         'Denotes the number of batches per epoch'
-        return int(np.floor(len(self.list_IDs) / self.batch_size))
+        return math.ceil(len(self.list_IDs) / self.batch_size)
 
     def __getitem__(self, index):
         'Generate one batch of data'
