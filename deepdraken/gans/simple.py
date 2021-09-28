@@ -4,6 +4,7 @@
 from typing import Optional, Tuple, Union
 import os
 import numpy as np
+import matplotlib.pyplot as plt
 
 import tensorflow as tf
 from tensorflow.keras import layers
@@ -69,7 +70,6 @@ class GAN():
                  generator = None,
                  discriminator = None,
                  optimizer = None,
-                 loss = 'binary crossentropy',
                  ) -> None:
 
         '''
@@ -80,11 +80,6 @@ class GAN():
         
         :returns: None
         '''
-
-        if type(loss) == str: 
-            self.loss = self.get_loss(loss)
-        else:
-            self.loss = loss
 
         if type(generator) == str and type(discriminator) == str:
             self.generator, self.discriminator = self.load_models(generator, discriminator)
@@ -97,8 +92,9 @@ class GAN():
 
         self.generator_optimizer, self.discriminator_optimizer = self.get_optimizer(optimizer)
 
-        self.generator_loss_list = None
-        self.discriminator_loss_list = None
+        self.loss = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+        self.history = {'gen_loss': [],
+                        'disc_loss': []}
         
 
     def load_models(self, generator_path: str, discriminator_path: str):
@@ -128,29 +124,19 @@ class GAN():
 
             :return: None
         '''
-        #TODO generalise the noise dimension
+        # TODO generalise the noise dimension
         noise_dim = generator.input_shape
         assert len(noise_dim) == 2, "Noise Vector should have a single dimension."
         self.noise_dim = noise_dim[1]
 
-        #TODO generalise the image dimension
+        # TODO generalise the image dimension
         generator_output_dim = generator.output_shape
         assert len(generator_output_dim) == 4 , "Output Image is not 3 dimensional"
         self.image_dim = generator_output_dim[1:]
 
         discriminator_input_dim = discriminator.input_shape
         assert generator_output_dim == discriminator_input_dim, "Generator output doens't have the same shape as discriminator input."
-
-    def get_loss(self, loss: str):
-        '''
-            Sets the loss function that will be used for calculated Generator and Discriminator Loss 
-        '''
-        if loss == 'binary crossentropy' or loss == 'bce':
-            return tf.keras.losses.BinaryCrossentropy(from_logits=True)
-        elif loss == 'wasserstein':
-            # TODO return wasserstein loss
-            raise NotImplementedError(('wasserstein loss not implemented'))
-
+        
     def generator_loss(self, fake_output):
         '''
             Calculates Generator Loss.
@@ -303,18 +289,29 @@ class GAN():
                 else:
                     print('Not able to find a suitable checkpoint strategy, checkpoints will not be saved.')
 
-        self.generator_loss_list = np.array(gen_loss_list)
-        self.discriminator_loss_list = np.array(disc_loss_list)
+        self.history['gen_loss'] = np.array(gen_loss_list)
+        self.history['disc_loss'] = np.array(disc_loss_list)
 
-    def plot(self, loss=True, accuracy=True):
+    def plot_loss(self):
 
-        if self.generator_loss_list == None and self.discriminator_loss_list == None :
-            raise Exception('Please train the modle first.')
+        ''' 
+        Plots the loss of the generator and discriminator model
+        '''
 
-        # TODO plot the loss curve from the loss lists in the train function
-        # TODO crate metric for the discriminator
+        if len(self.history['gen_loss']) == 0:
+            print('No generator loss data found, pleace check if you have trained the model.')
+        if len(self.history['disc_loss']) == 0 :
+            print('No discriminator loss data found, pleace check if you have trained the model.')
+
+        plt.plot(self.history['gen_loss'])
+        plt.plot(self.history['disc_loss'])
+        plt.title('model loss')
+        plt.ylabel('loss')
+        plt.xlabel('epoch')
+        plt.legend(['generator', 'discriminator'], loc='upper left')
+        plt.show()
+        # TODO crate a different function for plotting the metric of the discriminator
         # TODO plot the accuracy
-        raise NotImplementedError('plotting function is not available')
 
     def run(self, data_path, epochs=2, batch_size=2, shuffle=True) -> None:
         
