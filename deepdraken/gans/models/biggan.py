@@ -1,9 +1,8 @@
-#import tensorflow.compat.v1 as tf
+import tensorflow as tf
 import numpy as np
-from scipy.stats import truncnorm
 import tensorflow_hub as hub
-from ...utils import one_hot_if_needed
-from utils import truncated_noise_sample
+from ...utils import one_hot, one_hot_if_needed
+from utils import truncated_noise_sample, interpolate_and_shape
 
 class BigGAN():
 
@@ -11,71 +10,79 @@ class BigGAN():
         Class for generating big gan images.
         Note: The class is still in development it may further change a lot.
     '''
+    MODLES = { 'biggan-deep-128': 'https://tfhub.dev/deepmind/biggan-deep-128/1',  # 128x128 BigGAN-deep
+               'biggan-deep-256': 'https://tfhub.dev/deepmind/biggan-deep-256/1',  # 256x256 BigGAN-deep
+               'biggan-deep-512': 'https://tfhub.dev/deepmind/biggan-deep-512/1',  # 512x512 BigGAN-deep
+               'biggan-128': 'https://tfhub.dev/deepmind/biggan-128/2',  # 128x128 BigGAN
+               'biggan-256': 'https://tfhub.dev/deepmind/biggan-256/2',  # 256x256 BigGAN
+               'biggan-512': 'https://tfhub.dev/deepmind/biggan-512/2'}  # 512x512 BigGAN
 
-    def __init__(self, model_name) -> None:
-        
-        print("Disabling Tensorflow V2 Behaviour.")
-        tf.disable_v2_behavior()
+    def __init__(self, model_name = 'biggan-deep-512') -> None:
 
-        self.BigGAN_deep_models = { 'biggan-deep-128': 'https://tfhub.dev/deepmind/biggan-deep-128/1',  # 128x128 BigGAN-deep
-                                    'biggan-deep-256': 'https://tfhub.dev/deepmind/biggan-deep-256/1',  # 256x256 BigGAN-deep
-                                    'biggan-deep-512': 'https://tfhub.dev/deepmind/biggan-deep-512/1',  # 512x512 BigGAN-deep
-                                    'biggan-128': 'https://tfhub.dev/deepmind/biggan-128/2',  # 128x128 BigGAN
-                                    'biggan-256': 'https://tfhub.dev/deepmind/biggan-256/2',  # 256x256 BigGAN
-                                    'biggan-512': 'https://tfhub.dev/deepmind/biggan-512/2'}  # 512x512 BigGAN
+        self.model = hub.KerasLayer(self.MODLES[model_name])
 
-        self.module = hub.Module(self.BigGAN_deep_models[model_name])
-        self.inputs = {k: tf.placeholder(v.dtype, v.get_shape().as_list(), k)
-                       for k, v in self.module.get_input_info_dict().items()}
+    def __get_images(self, y, z, truncation):
+        # generating and post processing the image
+        images = self.model({'y': y, 'z':z, 'truncation': truncation})
+        images = np.asarray(images)
+        images = np.clip(((images + 1) / 2.0) * 256, 0, 255)
+        images = np.uint8(images)
+        return images
 
-        self.output = self.module(self.inputs)
-
-        self.input_z = self.inputs['z']
-        self.input_y = self.inputs['y']
-        self.input_trunc = self.inputs['truncation']
-
-        self.dim_z = self.input_z.shape.as_list()[1]
-        self.vocab_size = self.input_y.shape.as_list()[1]
-
-        self.initializer = tf.global_variables_initializer()
-
-    def generate_image(self, num_samples, label, truncation=1., batch_size=8, noise_seed=0):
+    def sample(self, num_samples, label, truncation=0.4, noise_seed=None):
         '''
         Generates Images
 
         :param num_samples: number of images to generate
         :param label: class of the image to be generated
-        :truncation: # TODO fill here
-        :param batch_size: number of images to be generated in a single batch
-        :param noise seed: noise seed for generating the noise
-        :return: four dimensional array containing all the generated images
+        :param truncation: # TODO fill here
+        :param noise_seed: seed for generating the noise, random seed is taken if None
+        :return: an array of generated images
         '''
 
-        noise = truncated_noise_sample(num_samples, self.dim_z, truncation, noise_seed)
-
-        noise = np.asarray(noise)
+        # generating the noise
+        z = truncated_noise_sample(num_samples, 128, truncation, noise_seed)
+        # converting into array if needed
+        z = np.asarray(z)
         label = np.asarray(label)
-        num = noise.shape[0]
         
+        # if an integer is provided as label
+        # create an array of labels
         if len(label.shape) == 0:
-            label = np.asarray([label] * num)
+            label = np.asarray([label] * num_samples)
         
-        if label.shape[0] != num:
-            raise ValueError('Got # noise samples ({}) != # label samples ({})'.format(noise.shape[0], label.shape[0]))
+        # if number of labels is not equal to number of samples to be generated
+        if label.shape[0] != num_samples:
+            raise ValueError('Got # noise samples ({}) != # label samples ({})'.format(z.shape[0], label.shape[0]))
         
-        label = one_hot_if_needed(label, 1000)
-        images = []
+        y = one_hot_if_needed(label, 1000) # one hot encoding the label
 
-        with tf.Session() as sess:
-            sess.run(self.initializer)
-            for batch_start in range(0, num, batch_size):
-                s = slice(batch_start, min(num, batch_start + batch_size))
-                feed_dict = {self.input_z: noise[s], self.input_y: label[s], self.input_trunc: truncation}
-                images.append(sess.run(self.output, feed_dict=feed_dict))
         
-        images = np.concatenate(images, axis=0)
-        assert images.shape[0] == num
-        images = np.clip(((images + 1) / 2.0) * 256, 0, 255)
-        images = np.uint8(images)
-        
+        images = self.__get_images(y, z, truncation)
+        return images
+
+    def interpolate(self, num_samples, label_A, label_B, num_interps=5, truncation=0.2, noise_seed_A=None, noise_seed_B=None):
+        '''
+        Generates interpolations for images between two classes or labels.
+
+        :param num_samples: number of samples to generate
+        :param label_A: class 1 for interpolation
+        :param  label_A: class 2 for interpolation
+        :param num_interps: number of interpolations to generate between the classes
+        :param truncation: # TODO fill here
+        :param noise_seed_A: seed for generating noise for the 1st class
+        :param noise_seed_B: seed for generating noise for the 2nd class
+        :return: an array of array containing interpolated images
+        '''
+
+        z_A, z_B = [truncated_noise_sample(num_samples, 128, truncation, noise_seed) for noise_seed in [noise_seed_A, noise_seed_B]]
+        y_A, y_B = [one_hot([category] * num_samples, 1000) for category in [label_A, label_B]]
+
+        z_interp = interpolate_and_shape(z_A, z_B, num_interps)
+        y_interp = interpolate_and_shape(y_A, y_B, num_interps)
+
+        images = self.__get_images(y_interp, z_interp, truncation)
+        shape = [num_samples, num_interps]
+        shape.extend([i for i in images.shape[1:]])
+        images = images.reshape(shape)
         return images

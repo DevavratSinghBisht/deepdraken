@@ -30,6 +30,10 @@ def interpolate(A, B, num_interps):
     alphas = np.linspace(0, 1, num_interps)
     return np.array([(1-a)*A + a*B for a in alphas])
 
+def interpolate_and_shape(A, B, num_interps):
+    interps = interpolate(A, B, num_interps)
+    return (interps.transpose(1, 0, *range(2, len(interps.shape))).reshape(num_samples * num_interps, *interps.shape[2:]))
+
 
 def truncated_noise_sample(n_samples, dim, truncation=1., seed=None):
     '''
