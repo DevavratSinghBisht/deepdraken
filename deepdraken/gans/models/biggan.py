@@ -2,7 +2,7 @@ import tensorflow as tf
 import numpy as np
 import tensorflow_hub as hub
 from ...utils import one_hot, one_hot_if_needed
-from utils import truncated_noise_sample, interpolate_and_shape
+from ..utils import truncated_noise_sample, interpolate_and_shape
 
 class BigGAN():
 
@@ -67,7 +67,7 @@ class BigGAN():
 
         :param num_samples: number of samples to generate
         :param label_A: class 1 for interpolation
-        :param  label_A: class 2 for interpolation
+        :param label_B: class 2 for interpolation
         :param num_interps: number of interpolations to generate between the classes
         :param truncation: # TODO fill here
         :param noise_seed_A: seed for generating noise for the 1st class
@@ -75,14 +75,19 @@ class BigGAN():
         :return: an array of array containing interpolated images
         '''
 
+        # generating noise samples of shape num_samples, 128 each
         z_A, z_B = [truncated_noise_sample(num_samples, 128, truncation, noise_seed) for noise_seed in [noise_seed_A, noise_seed_B]]
+        # generating one_hot encoded class vectors of the class
         y_A, y_B = [one_hot([category] * num_samples, 1000) for category in [label_A, label_B]]
 
-        z_interp = interpolate_and_shape(z_A, z_B, num_interps)
-        y_interp = interpolate_and_shape(y_A, y_B, num_interps)
+        # interpolating the noise samples and class vectors
+        z_interp = interpolate_and_shape(z_A, z_B, num_samples, num_interps)
+        y_interp = interpolate_and_shape(y_A, y_B, num_samples, num_interps)
 
+        # generating and reshaping the image
         images = self.__get_images(y_interp, z_interp, truncation)
         shape = [num_samples, num_interps]
         shape.extend([i for i in images.shape[1:]])
         images = images.reshape(shape)
+        
         return images
