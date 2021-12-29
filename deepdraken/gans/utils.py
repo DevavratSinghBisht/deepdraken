@@ -41,7 +41,7 @@ def truncated_noise_sample(n_samples, dim, truncation=1., seed=None):
     
     :param n_samples: number of noise vector samples to be generated
     :param dim: dimension of the noise vector to be generated
-    :param truncation: # TODO fill here
+    :param truncation: truncation value for the noise vector
     :param seed: random seed to use
     :return: noise sample of given dimension and truncation
     '''
