@@ -163,9 +163,16 @@ class BigGAN():
                 col = 3 if num_images > 3 else num_images
                 row = math.ceil(num_images / col)
 
-        _, axs = plt.subplots(row, col, figsize=(12, 12))
-        axs = axs.flatten()
-        imgs = np.reshape(images, [row * col, *images.shape[-3:]]) 
-        for img, ax in zip(imgs, axs):
-            ax.imshow(img)
-        plt.show()
+        imgs = np.reshape(images, [row * col, *images.shape[-3:]])
+        
+        if row == 1 and col ==1:
+            plt.imshow(images[0])
+
+        else:
+
+            _, axs = plt.subplots(row, col, figsize=(12, 12))
+            axs = axs.flatten()
+         
+            for img, ax in zip(imgs, axs):
+                ax.imshow(img)
+            plt.show()
