@@ -8,12 +8,12 @@ from ..utils import truncated_noise_sample, interpolate_and_shape
 
 import numpy as np
 import matplotlib.pyplot as plt
+import math
 
 class BigGAN():
 
     '''
         Class for generating big gan images.
-        Note: The class is still in development it may further change a lot.
     '''
     MODELS = { 'biggan-deep-128': 'https://tfhub.dev/deepmind/biggan-deep-128/1',  # 128x128 BigGAN-deep
                'biggan-deep-256': 'https://tfhub.dev/deepmind/biggan-deep-256/1',  # 256x256 BigGAN-deep
@@ -54,6 +54,7 @@ class BigGAN():
         :param num_samples: number of images to generate
         :param truncation: truncation value for the noise vector
         :param noise_seed: seed for generating the noise, random seed is taken if None
+        :param plot: plots the images if set to true
         :return: an array of generated images
         '''
 
@@ -159,8 +160,8 @@ class BigGAN():
 
             elif len(images.shape) == 4: # images from sampling
                 num_images = images.shape[0]
-                col = 3
-                row = (num_images // col) + 1
+                col = 3 if num_images > 3 else num_images
+                row = math.ceil(num_images / col)
 
         _, axs = plt.subplots(row, col, figsize=(12, 12))
         axs = axs.flatten()
