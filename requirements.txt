@@ -1,14 +1,19 @@
 os
 tqdm
+typing
 
 # maths
+math
 numpy
 scipy
 matplotlib
 
 # tensorflow
-tensorflow>=2.6.0
-tensorflow-hub>=0.12.0
+tensorflow>=2.0.0
+tensorflow-hub==0.12.0
+
+# pytorch
+pytorch
 
 # coputer vision
 opencv-python
