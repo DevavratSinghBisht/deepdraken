@@ -71,7 +71,7 @@ setup(
     packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]), # TODO see this
     dependency_links=dependency_links,
     install_requires=parsed_requirements,
-    python_requires=">=3.7.0",
+    python_requires=">=3.6.0",
     classifiers=[
         "Intended Audience :: Science/Research",
         "License :: OSI Approved :: Apache Software License",
