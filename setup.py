@@ -67,7 +67,7 @@ setup(
     keywords="Computer-Vision Transfer-Learning",
     license="Apache License 2.0",
     url="https://github.com/DevavratSinghBisht/deepdraken",
-    download_url=f"https://github.com/deepset-ai/haystack/archive/{_version}.tar.gz", # TODO see this
+    download_url=f"https://github.com/DevavratSinghBisht/deepdraken", # TODO see this
     packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]), # TODO see this
     dependency_links=dependency_links,
     install_requires=parsed_requirements,
