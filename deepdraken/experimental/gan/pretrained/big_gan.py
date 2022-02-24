@@ -1,13 +1,11 @@
-from typing import Optional, Union
+from typing import Optional, Union, List
+import numpy as np
 
 import tensorflow as tf
 import tensorflow_hub as hub
 
-from ...utils import one_hot, one_hot_if_needed
-from ..utils import truncated_noise_sample, interpolate_and_shape
-#from .utils import EmbeddingComparator
+from ....utils import one_hot, one_hot_if_needed, truncated_noise_sample, interpolate_and_shape
 
-import numpy as np
 
 class BigGAN():
 
@@ -24,7 +22,6 @@ class BigGAN():
     def __init__(self, model_name: Optional[str] = 'biggan-deep-512') -> None:
 
         self.model = hub.KerasLayer(self.MODELS[model_name])
-        #self.embedding_comparator = EmbeddingComparator()
 
     def __get_images(self, y: np.ndarray, z: np.ndarray, truncation: int) -> np.ndarray:
         '''
@@ -42,7 +39,7 @@ class BigGAN():
         return images
 
     def sample(self,
-               label: list,
+               label: List[int],
                truncation: Optional[float] = 0.4,
                noise_seed: Optional[int] = None):
         '''
@@ -56,8 +53,7 @@ class BigGAN():
         :return: an array of generated images
         '''
         num_samples = len(label)
-        #label = [self.embedding_comparator.get_class_id(i) if type(i) == str else i for i in label ]
-
+    
         # generating the noise
         z = truncated_noise_sample(num_samples, 128, truncation, noise_seed)
         # converting into array if needed
@@ -71,8 +67,8 @@ class BigGAN():
         return images
 
     def interpolate(self,
-                    label_A: Union[int, str],
-                    label_B: Union[int, str],
+                    label_A: str,
+                    label_B: str,
                     num_samples: int,
                     num_interps: Optional[int] = 5,
                     truncation: Optional[float] = 0.2,
@@ -90,11 +86,6 @@ class BigGAN():
         :param noise_seed_B: seed for generating noise for the 2nd class
         :return: an array of array containing interpolated images
         '''
-
-        #if type(label_A) == str:
-            #label_A = self.embedding_comparator.get_class_id(label_A)
-        #if type(label_B) == str:
-            #label_B = self.embedding_comparator.get_class_id(label_B)
 
         # generating noise samples of shape num_samples, 128 each
         z_A, z_B = [truncated_noise_sample(num_samples, 128, truncation, noise_seed) for noise_seed in [noise_seed_A, noise_seed_B]]

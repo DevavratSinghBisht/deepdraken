@@ -1,7 +1,6 @@
 tqdm
 numpy
 scipy
-
 # pytorch
 torch
 torchvision

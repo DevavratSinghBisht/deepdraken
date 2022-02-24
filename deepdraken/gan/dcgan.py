@@ -5,7 +5,7 @@ import torch
 from torch import nn
 import torchvision as tv
 
-from .base import BaseModel
+from ..base import BaseModel
 
 # TODO class for dataloader
 

@@ -5,7 +5,7 @@ from typing import List
 
 import torch
 from torch import nn
-from .base_utils import get_scheduler
+from .utils.base_utils import get_scheduler
 
 class BaseModel(ABC):
     """
