@@ -1,0 +1,1 @@
+print("Make sure you have installed tensorflow>=2.0.0 and tensorflow_hub====0.12.0")
