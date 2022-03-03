@@ -1,5 +1,7 @@
 from typing import Union
 from tqdm import tqdm
+import numpy as np
+from pathlib import Path
 
 import torch
 from torch import nn
@@ -14,7 +16,7 @@ class DCGAN(BaseModel):
     def __init__(self,
                  net_G,
                  net_D,
-                 device,
+                 device='cpu',
                  gpu_ids=[0]):
         
         super().__init__(device, gpu_ids)
@@ -48,6 +50,15 @@ class DCGAN(BaseModel):
         self.loss_G = float('nan')
         self.loss_D, self.loss_D_real, self.loss_D_fake = float('nan'), float('nan'), float('nan')
 
+    @classmethod
+    def from_disc(cls, dir_path, device, gpu_ids=[0]):
+        
+        dir_path = Path(dir_path)
+        net_G = torch.load(dir_path / 'net_G.pt')
+        net_D = torch.load(dir_path / 'net_D.pt')
+        return cls(net_G, net_D, device, gpu_ids)
+
+
     def set_data(self, batch) -> None:
 
         '''
@@ -79,7 +90,7 @@ class DCGAN(BaseModel):
 
             transform.extend([tv.transforms.Resize((self.h, self.w)),
                               tv.transforms.ToTensor(),
-                              tv.transforms.Normalize((0.5,) * self.c, (0.5,) * self.c),]) # TODO check this
+                              tv.transforms.Normalize((0.5,) * self.c, (0.5,) * self.c),])
             return tv.transforms.Compose(transform)
 
         if transform == None :
@@ -159,6 +170,12 @@ class DCGAN(BaseModel):
 
         self.criterion = criterion.to(self.device)
 
+    def on_epoch_start(self):
+        pass
+
+    def on_epoch_end(self):
+        pass
+
     def fit(self, 
             data : Union[str, torch.Tensor], 
             epochs: int, 
@@ -196,20 +213,36 @@ class DCGAN(BaseModel):
                 self.set_data(batch)
                 self.optimize_parameters()
 
-            self.on_epoch_end()
-
             # TODO print the mean loss of whole epoch rather than for the latest batch
             print("[Epoch {}/{}] [G loss: {}] [D loss: {}]".format(epoch, epochs, self.loss_G, self.loss_D))
+            self.on_epoch_end()
 
-    def on_epoch_start(self):
-        pass
+    def generate_image(self, num_sample:int = 1, dtype:str ='tensor') -> Union[torch.Tensor, np.ndarray]:
+        '''
+        Generates images using Generator model.
+        :param num_sample (int): number of images to be generated
+        :param type (str): datatype of the returned image
+                                -- tensor : pytorch tensor
+                                -- numpy  : numpy array
+        :return (torch.Tensor or numpy.ndarray): generated image pytorh tensor or numpy array
+        '''
 
-    def on_epoch_end(self):
-        pass
+        noise = self.get_noise(num_sample, self.z_dim)
+        with torch.no_grad():
+            img = self.net_G(noise)
+
+        img = img.cpu()
+
+        if dtype == "tensor":
+            return img
+        elif dtype == "array":
+            return img.numpy()
+        else:
+            print(f"Image of {dtype} datatype can not be generaed. Please choose from tensor or array")
+
 
 # TODO functionality of using lr schedulers
 # TODO functionality of using data other than from dataloader, e.g. tensors
-# TODO returning generated images
 # TODO interpolating generated images --> linear, spherical
 # TODO saving images in disc
 # TODO loading only generator model for sampling if training mode not available.
