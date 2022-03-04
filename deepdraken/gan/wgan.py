@@ -8,8 +8,8 @@ from .dcgan import DCGAN
 
 class WGAN(DCGAN):
 
-    def __init__(self, net_G, net_D, device, is_train=True, gpu_ids=[]):
-        super().__init__(net_G, net_D, device, is_train, gpu_ids)
+    def __init__(self, net_G, net_D, device='cpu', gpu_ids=[0]):
+        super().__init__(net_G, net_D, device, gpu_ids)
 
     def backward_G(self):
         
@@ -22,6 +22,14 @@ class WGAN(DCGAN):
         self.loss_D_fake = torch.mean(self.net_D(self.fake_images.detach()))
         self.loss_D = self.loss_D_real + self.loss_D_fake # TODO check if division by 2 is to be done or not
         self.loss_D.backward()
+    
+    def optimize_parameters(self) -> None:
+         
+        data = super().optimize_parameters()
+        for p in self.net_D.parameters():
+            p.data.clamp_(self.lower_clip, self.upper_clip)
+
+        return data
 
     def compile(self, optim_G, optim_D):
         self.optimizer_G = optim_G
@@ -36,41 +44,6 @@ class WGAN(DCGAN):
             self.upper_clip, self.lower_clip == clip_value
 
         return super().fit(data, epochs, batch_size, shuffle, transform)
-
-    def on_epoch_end(self):
-
-        for p in self.net_D.parameters():
-            p.data.clamp_(self.lower_clip, self.upper_clip)
-        
-'''
-    def fit(self, 
-            data, 
-            epochs, 
-            batch_size=64, 
-            shuffle=True, 
-            transform=None,
-            clip_value=0.01):
-        
-        # Setting nets to training mode
-        self.set_mode('train')
-
-        if isinstance(data, str):
-            data = self.get_dataloader(data, batch_size, shuffle, transform)
-        elif isinstance(data, torch.Tensor):
-            pass # TODO for direct tensor inputs
-
-        for epoch in range(epochs): # TODO use TQDM here
-            for batch_idx, batch in enumerate(data):
-
-                self.set_data(batch)
-                self.optimize_parameters()
-
-                for p in self.net_D.parameters():
-                    p.data.clamp_(lower_clip, upper_clip)
-
-            # TODO print the mean loss of whole epoch rather than for the latest batch
-            print("[Epoch {}/{}] [G loss: {}] [D loss: {}]".format(epoch, epochs, self.loss_G, self.loss_D))
-'''
 
 import numpy as np
 
@@ -90,7 +63,8 @@ class WGANGP(WGAN):
         """
         
         # Random weight term for interpolation between real and fake samples
-        alpha = torch.from_numpy(np.random.random((self.batch_size, 1, 1, 1))).to(self.device)
+        # Random numbers from a uniform distribution on the interval [0, 1)[0,1)
+        alpha = torch.rand((self.batch_size, 1, 1, 1), device=self.device)
         
         # Get random interpolation between real and fake samples
         interpolates = (alpha * real_samples + ((1 - alpha) * fake_samples)).requires_grad_(True)
@@ -121,6 +95,9 @@ class WGANGP(WGAN):
             self.loss_D = self.loss_D_real + self.loss_D_fake + self.lambda_gp * gradient_penalty
         
         self.loss_D.backward()
+
+    def optimize_parameters(self) -> None:
+        return super(WGAN, self).optimize_parameters()
 
     def fit(self, data, epochs, batch_size=64, shuffle=True, transform=None, lambda_gp=10):
 

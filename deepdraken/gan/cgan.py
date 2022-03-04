@@ -1,16 +1,19 @@
-import numpy as np
+from typing import List, Union
+
 import torch
+import torchvision as tv
 
 from .dcgan import DCGAN
 
 class CGAN(DCGAN):
 
-    def __init__(self, gen, disc, device, is_train=True, gpu_ids=[]):
-        super().__init__(gen, disc, device, is_train, gpu_ids)
+    def __init__(self, gen, disc, n_classes:int, device:str, gpu_ids:List[int] = []):
+        super().__init__(gen, disc, device, gpu_ids)
+        self.n_classes = n_classes
 
     def set_data(self, batch):
         super().set_data(batch)
-        self.fake_labels = torch.from_numpy(np.random.randint(0, self.n_classes, self.batch_size)).to(self.device) # TODO manage n_classes
+        self.fake_labels = torch.randint(0, self.n_classes, (self.batch_size,) , device=self.device)
 
     def forward(self):
         
