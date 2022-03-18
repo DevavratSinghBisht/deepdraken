@@ -1,15 +1,25 @@
-from typing import List, Union
+from typing import List
+from pathlib import Path
 
 import torch
 import torchvision as tv
 
-from .dcgan import DCGAN
+from deepdraken.image_generation.gans.dcgan import DCGAN
 
 class CGAN(DCGAN):
 
-    def __init__(self, gen, disc, n_classes:int, device:str, gpu_ids:List[int] = []):
+    def __init__(self, gen, disc, n_classes:int, device:str='cpu', gpu_ids:List[int]=[0]):
         super().__init__(gen, disc, device, gpu_ids)
         self.n_classes = n_classes
+
+    @classmethod
+    def from_disc(cls, dir_path, device:str='cpu', gpu_ids:List[int]=[0]):
+        dir_path = Path(dir_path)
+        meta = torch.load(dir_path / 'meta.pt')
+        n_classes = meta['n_classes']
+        net_G = torch.load(dir_path / 'net_G.pt')
+        net_D = torch.load(dir_path / 'net_D.pt')
+        return cls(net_G, net_D, n_classes, device, gpu_ids)
 
     def set_data(self, batch):
         super().set_data(batch)

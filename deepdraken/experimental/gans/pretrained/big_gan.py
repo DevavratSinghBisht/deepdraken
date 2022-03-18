@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_hub as hub
 
-from ....utils import one_hot, one_hot_if_needed, truncated_noise_sample, interpolate_and_shape
+from deepdraken.utils import one_hot, one_hot_if_needed, truncated_noise_sample, interpolate_and_shape
 
 
 class BigGAN():

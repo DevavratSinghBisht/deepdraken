@@ -7,7 +7,7 @@ import torch
 from torch import nn
 import torchvision as tv
 
-from ..base import BaseModel
+from deepdraken.base import BaseModel
 
 # TODO class for dataloader
 
@@ -51,7 +51,7 @@ class DCGAN(BaseModel):
         self.loss_D, self.loss_D_real, self.loss_D_fake = float('nan'), float('nan'), float('nan')
 
     @classmethod
-    def from_disc(cls, dir_path, device, gpu_ids=[0]):
+    def from_disc(cls, dir_path, device='cpu', gpu_ids=[0]):
         
         dir_path = Path(dir_path)
         net_G = torch.load(dir_path / 'net_G.pt')

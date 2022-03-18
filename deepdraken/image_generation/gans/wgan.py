@@ -4,7 +4,7 @@
 
 import torch
 
-from .dcgan import DCGAN
+from deepdraken.image_generation.gans.dcgan import DCGAN
 
 class WGAN(DCGAN):
 

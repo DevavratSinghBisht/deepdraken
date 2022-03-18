@@ -3,7 +3,7 @@ from typing import Optional, Union
 import tensorflow as tf
 import tensorflow_hub as hub
 
-from ....utils import noise_sample
+from deepdraken.utils import noise_sample
 
 import numpy as np
 
