@@ -26,7 +26,7 @@ class BaseModel(ABC):
         Initialize the BaseModel class.
         
         :param device (str): device (cpu or cuda) to use
-        :param gpu_ids (list of int or torch.device): CUDA devices (default: all devices) 
+        :param gpu_ids (list of int): CUDA devices (default: all devices) 
         
         When creating your custom class, you need to implement your own initialization.
         In this function, you should first call <BaseModel.__init__(self, device, gpu_ids)>
