@@ -1,5 +1,5 @@
 '''
-Code at 
+Reference Code at 
 https://github.com/junyanz/pytorch-CycleGAN-and-pix2pix/blob/9e6fff7b7d5215a38be3cac074ca7087041bea0d/models/cycle_gan_model.py#L8
 '''
 
