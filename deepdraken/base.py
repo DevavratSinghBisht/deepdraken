@@ -21,12 +21,12 @@ class BaseModel(ABC):
 
     def __init__(self,
                  device : str = 'cpu',
-                 gpu_ids: List[int] = [0]):
+                 gpu_ids: List[int] = None):
         """
         Initialize the BaseModel class.
         
-        :param device: device (cpu or cuda) to use
-        :param gpu_ids: list of gpu ids that can be used when decvice is set to cuda, defalut: empty list 
+        :param device (str): device (cpu or cuda) to use
+        :param gpu_ids (list of int or torch.device): CUDA devices (default: all devices) 
         
         When creating your custom class, you need to implement your own initialization.
         In this function, you should first call <BaseModel.__init__(self, device, gpu_ids)>
@@ -43,17 +43,17 @@ class BaseModel(ABC):
         if device == "cuda":
             if torch.cuda.is_available():
                 
-                assert len(self.gpu_ids) != 0
-                self.device = torch.device('cuda:{}'.format(self.gpu_ids[0]))
+                if self.gpu_ids == None:
+                    self.gpu_ids = [i for i in range(torch.cuda.device_count())]
+
+                self.device = torch.device(f"cuda:{self.gpu_ids[0]}")
             
             else:
                 print("CUDA not available falling back to CPU.")
-                self.gpu_ids = []
-                self.device = torch.device('cpu')
+                self.device = torch.device("cpu")
 
         elif device == "cpu":
-            self.gpu_ids = []
-            self.device = torch.device('cpu')
+            self.device = torch.device("cpu")
         
         #  initializing lists
         self.model_names = []

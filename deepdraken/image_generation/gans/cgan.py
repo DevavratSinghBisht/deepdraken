@@ -8,7 +8,13 @@ from deepdraken.image_generation.gans.dcgan import DCGAN
 
 class CGAN(DCGAN):
 
-    def __init__(self, gen, disc, n_classes:int, device:str='cpu', gpu_ids:List[int]=[0]):
+    def __init__(self,
+                 gen,
+                 disc,
+                 n_classes:int,
+                 device : str = 'cpu',
+                 gpu_ids : List[int] = None):
+                 
         super().__init__(gen, disc, device, gpu_ids)
         self.n_classes = n_classes
 

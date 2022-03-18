@@ -17,7 +17,7 @@ class DCGAN(BaseModel):
                  net_G,
                  net_D,
                  device='cpu',
-                 gpu_ids=[0]):
+                 gpu_ids=None):
         
         super().__init__(device, gpu_ids)
 

@@ -1,14 +1,10 @@
-# TODO inherit gan.py , change it's loss
-# TODO add gradient penalty
-# TODO add gradient clipping
-
 import torch
 
 from deepdraken.image_generation.gans.dcgan import DCGAN
 
 class WGAN(DCGAN):
 
-    def __init__(self, net_G, net_D, device='cpu', gpu_ids=[0]):
+    def __init__(self, net_G, net_D, device='cpu', gpu_ids=None):
         super().__init__(net_G, net_D, device, gpu_ids)
 
     def backward_G(self):
@@ -45,11 +41,9 @@ class WGAN(DCGAN):
 
         return super().fit(data, epochs, batch_size, shuffle, transform)
 
-import numpy as np
-
 class WGANGP(WGAN):
 
-    def __init__(self, net_G, net_D, device, is_train=True, gpu_ids=[]):
+    def __init__(self, net_G, net_D, device, is_train=True, gpu_ids=None):
         super().__init__(net_G, net_D, device, is_train, gpu_ids)
 
     def compute_gradient_penalty(self, real_samples, fake_samples):
