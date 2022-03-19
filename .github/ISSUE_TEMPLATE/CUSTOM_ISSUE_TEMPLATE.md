@@ -1,6 +1,6 @@
 ---
 name: Custom Issue Template
-about: Use this template if no other satisfies your need.
+about: Use this template if no other template satisfies your need.
 title: ''
 labels: ''
 assignees: ''
