@@ -219,144 +219,145 @@ class BaseModel(ABC):
                     print(net)
         print('--------------------------------------------------------------------------------------------')
 
-    def get_current_checkpoint_name(self) -> str:
-        '''
-        Created current checkpoint name
-        :return (str): checkpoint name without extension
-        '''
 
-        current_losses = self.get_current_losses()
-        loss_str = '_'.join([str(i) + str(current_losses[i]) for i in current_losses])
-        name = f'{self.__class__.__name__}_epoch{self.epoch}_{loss_str}'
-        return name
+    # def get_current_checkpoint_name(self) -> str:
+    #     '''
+    #     Created current checkpoint name
+    #     :return (str): checkpoint name without extension
+    #     '''
 
-    def save_networks(self, dir_path:str) -> None:
-        """
-        Save all the networks to the disk.        
-        :param dir (str): networks will be saved at given directory path
-        :return: None
-        """
-        dir_path = Path(dir_path)
-        dir_path = dir_path / self.get_current_checkpoint_name()
-        dir_path.mkdir(parents=True, exist_ok=True)
-        print(f"Saving Networks at {dir_path}")
+    #     current_losses = self.get_current_losses()
+    #     loss_str = '_'.join([str(i) + str(current_losses[i]) for i in current_losses])
+    #     name = f'{self.__class__.__name__}_epoch{self.epoch}_{loss_str}'
+    #     return name
 
-        for name in self.model_names:
-            if isinstance(name, str):
-                file_name = f'net_{name}.pt'
-                file_path = dir_path / file_name
-                net = getattr(self, 'net_' + name)
+    # def save_networks(self, dir_path:str) -> None:
+    #     """
+    #     Save all the networks to the disk.        
+    #     :param dir (str): networks will be saved at given directory path
+    #     :return: None
+    #     """
+    #     dir_path = Path(dir_path)
+    #     dir_path = dir_path / self.get_current_checkpoint_name()
+    #     dir_path.mkdir(parents=True, exist_ok=True)
+    #     print(f"Saving Networks at {dir_path}")
 
-                if 'cuda' in str(self.device):
-                    torch.save(net.module.cpu(), file_path)
-                    net.to(self.device)
-                else:
-                    torch.save(net, file_path)
+    #     for name in self.model_names:
+    #         if isinstance(name, str):
+    #             file_name = f'net_{name}.pt'
+    #             file_path = dir_path / file_name
+    #             net = getattr(self, 'net_' + name)
 
-    def load_networks(self, dir_path: str) -> None:
-        """
-        Load all the networks from the disk.        
-        :param dir_path: networks will be loaded from given directory path
-        :return: None
-        """
-        dir_path = Path(dir_path)
+    #             if 'cuda' in str(self.device):
+    #                 torch.save(net.module.cpu(), file_path)
+    #                 net.to(self.device)
+    #             else:
+    #                 torch.save(net, file_path)
 
-        for name in self.model_names:
-            if isinstance(name, str):
-                file_name = f'net_{name}.pt'
-                file_path = dir_path / file_name
-                print(f'loading the model from {file_path}')        
-                net = torch.load(file_path)
-                net.to(self.device)
-                if 'cuda' in str(self.device) :
-                    net = torch.nn.DataParallel(net, self.gpu_ids)
-                setattr(self, 'net_' + name, net)
+    # def load_networks(self, dir_path: str) -> None:
+    #     """
+    #     Load all the networks from the disk.        
+    #     :param dir_path: networks will be loaded from given directory path
+    #     :return: None
+    #     """
+    #     dir_path = Path(dir_path)
 
-        print("Networks have been loaded, make sure to compile again.")
+    #     for name in self.model_names:
+    #         if isinstance(name, str):
+    #             file_name = f'net_{name}.pt'
+    #             file_path = dir_path / file_name
+    #             print(f'loading the model from {file_path}')        
+    #             net = torch.load(file_path)
+    #             net.to(self.device)
+    #             if 'cuda' in str(self.device) :
+    #                 net = torch.nn.DataParallel(net, self.gpu_ids)
+    #             setattr(self, 'net_' + name, net)
 
-    def save_checkpoints(self, dir_path: str) -> None:
-        '''
-        Saves the checkpoint at given diretory path.
-        :param dir_path (str): checkpoint will be saved at given file
-        :return: None
-        '''
+    #     print("Networks have been loaded, make sure to compile again.")
 
-        dir_path = Path(dir_path)
-        dir_path = dir_path / self.get_current_checkpoint_name()
-        dir_path.mkdir(parents=True, exist_ok=True)
+    # def save_checkpoints(self, dir_path: str) -> None:
+    #     '''
+    #     Saves the checkpoint at given diretory path.
+    #     :param dir_path (str): checkpoint will be saved at given file
+    #     :return: None
+    #     '''
 
-        print(f'Saving checkpoint at {dir_path}')
+    #     dir_path = Path(dir_path)
+    #     dir_path = dir_path / self.get_current_checkpoint_name()
+    #     dir_path.mkdir(parents=True, exist_ok=True)
 
-        # For saving models
-        for net_name in self.model_names:
-            file_path = dir_path / ('net_' + net_name + '.pt')
-            checkpoint = {}
-            net = getattr(self, 'net_' + net_name)
+    #     print(f'Saving checkpoint at {dir_path}')
+
+    #     # For saving models
+    #     for net_name in self.model_names:
+    #         file_path = dir_path / ('net_' + net_name + '.pt')
+    #         checkpoint = {}
+    #         net = getattr(self, 'net_' + net_name)
             
-            if isinstance(net, nn.DataParallel):
-                state_dict = net.module.cpu().state_dict()
-                net.to(self.device)
-            else:
-                state_dict = net.state_dict()
+    #         if isinstance(net, nn.DataParallel):
+    #             state_dict = net.module.cpu().state_dict()
+    #             net.to(self.device)
+    #         else:
+    #             state_dict = net.state_dict()
 
-            checkpoint['net_' + net_name + '_state_dict'] = state_dict
-            torch.save(checkpoint, file_path)
+    #         checkpoint['net_' + net_name + '_state_dict'] = state_dict
+    #         torch.save(checkpoint, file_path)
 
-        # For saving Optimizers
-        optims = {}
-        for optim_name in self.optimizer_names:
-            optim = getattr(self, 'optimizer_' + optim_name)
-            optims['optimizer_' + optim_name + '_state_dict'] = optim.state_dict()
-            torch.save(optims, dir_path / 'optimizers.pt')
+    #     # For saving Optimizers
+    #     optims = {}
+    #     for optim_name in self.optimizer_names:
+    #         optim = getattr(self, 'optimizer_' + optim_name)
+    #         optims['optimizer_' + optim_name + '_state_dict'] = optim.state_dict()
+    #         torch.save(optims, dir_path / 'optimizers.pt')
 
-        # Losses and Epoch will be saved in meta.pt
-        # For saving Losses
-        meta = {}
-        current_losses = self.get_current_losses()
-        for loss_name in current_losses:
-            meta['loss_' + loss_name] = current_losses[loss_name]
+    #     # Losses and Epoch will be saved in meta.pt
+    #     # For saving Losses
+    #     meta = {}
+    #     current_losses = self.get_current_losses()
+    #     for loss_name in current_losses:
+    #         meta['loss_' + loss_name] = current_losses[loss_name]
 
-        # For saving epoch
-        meta['epoch'] = self.epoch
+    #     # For saving epoch
+    #     meta['epoch'] = self.epoch
 
-        # Sving the data
-        torch.save(meta, dir_path / 'meta.pt')
+    #     # Sving the data
+    #     torch.save(meta, dir_path / 'meta.pt')
 
-    def load_checkpoints(self, dir_path:str):
-        '''
-        Loads all the model checkpoints from the disk.
+    # def load_checkpoints(self, dir_path:str):
+    #     '''
+    #     Loads all the model checkpoints from the disk.
 
-        :param dir_path (str): checkpoint will be loaded from given directory
-        :return: None
-        '''
-        dir_path = Path(dir_path)
-        print(f'Loading checkpoint from {dir_path}')
+    #     :param dir_path (str): checkpoint will be loaded from given directory
+    #     :return: None
+    #     '''
+    #     dir_path = Path(dir_path)
+    #     print(f'Loading checkpoint from {dir_path}')
 
-        # Loading Models
-        for net_name in self.model_names:
+    #     # Loading Models
+    #     for net_name in self.model_names:
 
-            net = getattr(self, 'net_' + net_name)
-            file_path = dir_path / ('net_' + net_name + '.pt')
-            checkpoint = torch.load(file_path, map_location=str(self.device))
-            state_dict = checkpoint['net_' + net_name + '_state_dict']
-            if isinstance(net, nn.DataParallel):
-                net = net.module            
-            net.load_state_dict(state_dict)
+    #         net = getattr(self, 'net_' + net_name)
+    #         file_path = dir_path / ('net_' + net_name + '.pt')
+    #         checkpoint = torch.load(file_path, map_location=str(self.device))
+    #         state_dict = checkpoint['net_' + net_name + '_state_dict']
+    #         if isinstance(net, nn.DataParallel):
+    #             net = net.module            
+    #         net.load_state_dict(state_dict)
 
 
-        # Loading Optimizers
-        optims = torch.load(dir_path / 'optimizers.pt')
-        for optim_name in self.optimizer_names:
+    #     # Loading Optimizers
+    #     optims = torch.load(dir_path / 'optimizers.pt')
+    #     for optim_name in self.optimizer_names:
 
-            optim = getattr(self, 'optimizer_' + optim_name)
-            optim.load_state_dict(optims['optimizer_' + optim_name + '_state_dict'])
+    #         optim = getattr(self, 'optimizer_' + optim_name)
+    #         optim.load_state_dict(optims['optimizer_' + optim_name + '_state_dict'])
 
-        # Loading Losses and Epoch from meta.pt
-        meta = torch.load(dir_path / 'meta.pt')
-        for loss_name in self.loss_names:
-            setattr(self, 'loss_' + loss_name, meta['loss_' + loss_name])
+    #     # Loading Losses and Epoch from meta.pt
+    #     meta = torch.load(dir_path / 'meta.pt')
+    #     for loss_name in self.loss_names:
+    #         setattr(self, 'loss_' + loss_name, meta['loss_' + loss_name])
 
-        self.epoch = meta['epoch']
+    #     self.epoch = meta['epoch']
 
     # def compute_visuals(self):
     #     """
