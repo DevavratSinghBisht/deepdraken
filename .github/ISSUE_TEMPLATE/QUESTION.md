@@ -1,5 +1,5 @@
 ---
-name: Question
+name: Question Template
 about: Something unclear? Just ask :)
 title: ''
 labels: ''

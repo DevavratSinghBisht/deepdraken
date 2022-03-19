@@ -1,6 +1,6 @@
 ---
-name: Bug report
-about: Errors you encountered
+name: Bug Report Template
+about: Errors you encountered.
 title: ''
 labels: ''
 assignees: ''

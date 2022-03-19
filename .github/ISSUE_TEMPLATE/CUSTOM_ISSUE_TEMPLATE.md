@@ -1,6 +1,6 @@
 ---
-name: Name of issue
-about: Issue you encountered
+name: Custom Issue Template
+about: Use this template if no other satisfies your need.
 title: ''
 labels: ''
 assignees: ''
