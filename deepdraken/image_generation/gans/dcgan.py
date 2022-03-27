@@ -241,7 +241,7 @@ class DCGAN(BaseModel):
 
     def append_batch_history(self):
         for name in itertools.chain(self.loss_names, self.metric_names):
-            self.batch_history[name].append(getattr(self, name))
+            self.batch_history[name].append(float(getattr(self, name)))
 
     def append_history(self):
 
