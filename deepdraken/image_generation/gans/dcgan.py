@@ -1,7 +1,7 @@
 from typing import Union
-from tqdm import tqdm
 import numpy as np
-from pathlib import Path
+from statistics import mean
+import itertools
 
 import torch
 from torch import nn
@@ -42,22 +42,20 @@ class DCGAN(BaseModel):
                 f'\nImage Height       : {self.h}',
                 f'\nImage Width        : {self.w}')
 
-        self.model_names = ['G', 'D']
-        self.optimizer_names = ['G', 'D']
-        self.loss_names = ['G', 'D_real', 'D_fake', 'D']
+        self.model_names = ['net_G', 'net_D']
+        self.optimizer_names = ['optimizer_G', 'optimizer_D']
+        self.loss_names = ['loss_G', 'loss_D', 'loss_D_real', 'loss_D_fake']
+        self.metric_names = []
         self.optimizers = []
         
         self.loss_G = float('nan')
         self.loss_D, self.loss_D_real, self.loss_D_fake = float('nan'), float('nan'), float('nan')
 
-    @classmethod
-    def from_disc(cls, dir_path, device='cpu', gpu_ids=[0]):
-        
-        dir_path = Path(dir_path)
-        net_G = torch.load(dir_path / 'net_G.pt')
-        net_D = torch.load(dir_path / 'net_D.pt')
-        return cls(net_G, net_D, device, gpu_ids)
-
+        self.history = {}
+        self.batch_history = {}
+        for loss_name in self.loss_names:
+            self.history[loss_name] = []
+            self.batch_history[loss_name] = []
 
     def set_data(self, batch) -> None:
 
@@ -170,12 +168,6 @@ class DCGAN(BaseModel):
 
         self.criterion = criterion.to(self.device)
 
-    def on_epoch_start(self):
-        pass
-
-    def on_epoch_end(self):
-        pass
-
     def fit(self, 
             data : Union[str, torch.Tensor], 
             epochs: int, 
@@ -212,9 +204,10 @@ class DCGAN(BaseModel):
             for batch_idx, batch in enumerate(data):
                 self.set_data(batch)
                 self.optimize_parameters()
+                self.append_batch_history() 
 
-            # TODO print the mean loss of whole epoch rather than for the latest batch
-            print("[Epoch {}/{}] [G loss: {}] [D loss: {}]".format(epoch, epochs, self.loss_G, self.loss_D))
+            self.append_history()
+            print("[Epoch {}/{}] [G loss: {}] [D loss: {}]".format(epoch, epochs, self.history['loss_G'][-1], self.history['loss_D'][-1]))
             self.on_epoch_end()
 
     def generate_image(self, num_sample:int = 1, dtype:str ='tensor') -> Union[torch.Tensor, np.ndarray]:
@@ -240,6 +233,21 @@ class DCGAN(BaseModel):
         else:
             print(f"Image of {dtype} datatype can not be generaed. Please choose from tensor or array")
 
+    def on_epoch_start(self):
+        pass
+
+    def on_epoch_end(self):
+        pass
+
+    def append_batch_history(self):
+        for name in itertools.chain(self.loss_names, self.metric_names):
+            self.batch_history[name].append(getattr(self, name))
+
+    def append_history(self):
+
+        for name in itertools.chain(self.loss_names, self.metric_names):
+            self.history[name].append(mean(self.batch_history[name]))
+            self.batch_history[name] = []
 
 # TODO functionality of using lr schedulers
 # TODO functionality of using data other than from dataloader, e.g. tensors
@@ -247,6 +255,5 @@ class DCGAN(BaseModel):
 # TODO saving images in disc
 # TODO loading only generator model for sampling if training mode not available.
 # TODO functionality for custom noise function
-# TODO functionality saving current loss history (and maybe other history) in a history variable
 # TODO gradient clipping
 # TODO gradient penalty

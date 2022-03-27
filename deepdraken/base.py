@@ -65,13 +65,6 @@ class BaseModel(ABC):
         self.metric = 0  # used for learning rate policy 'plateau'
         self.epoch = 0
 
-    @abstractclassmethod
-    def from_disc(cls, dir_path:str):
-        """
-        Loads the models from the disc and initializes the class.
-        """
-        pass
-
     @abstractmethod
     def set_data(self, batch: tuple):
         """
@@ -137,7 +130,7 @@ class BaseModel(ABC):
         """
         for name in self.model_names:
             if isinstance(name, str):
-                net = getattr(self, 'net_' + name)
+                net = getattr(self, name)
                 
                 if mode == 'train':
                     net.train()
@@ -196,7 +189,7 @@ class BaseModel(ABC):
         errors_ret = OrderedDict()
         for name in self.loss_names:
             if isinstance(name, str):
-                errors_ret[name] = float(getattr(self, 'loss_' + name))  # float(...) works for both scalar tensor and float number
+                errors_ret[name] = float(getattr(self, name))  # float(...) works for both scalar tensor and float number
         return errors_ret
 
     def print_networks(self, verbose=False) -> None:
@@ -210,7 +203,7 @@ class BaseModel(ABC):
         print('----------------------------------------- Networks -----------------------------------------')
         for name in self.model_names:
             if isinstance(name, str):
-                net = getattr(self, 'net_' + name)
+                net = getattr(self, name)
                 num_params = 0
                 for param in net.parameters():
                     num_params += param.numel()
