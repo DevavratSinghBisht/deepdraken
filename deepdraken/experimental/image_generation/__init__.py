@@ -1,0 +1,2 @@
+from deepdraken.experimental.image_generation.big_gan import BigGAN
+from deepdraken.experimental.image_generation.compare_gan import CompareGAN
